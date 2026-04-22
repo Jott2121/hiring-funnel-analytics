@@ -105,10 +105,30 @@ The stage-by-stage breakdown shows the gap concentrates at phone screen — exac
 
 ---
 
-## Run it yourself
+## Interactive dashboard
+
+A multi-page Streamlit app ships with the repo:
+
+| Page | Purpose |
+|---|---|
+| **Home** | Funnel overview, KPI strip, conversion matrix, filters by role + location |
+| **📣 Source Effectiveness** | Volume vs hire rate scatter + budget reallocation recommendation |
+| **⚖️ Bias Detection** | Statistical pass-rate gap with p-values; stage-by-stage breakdown; per-role bias map |
 
 ```bash
 pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+**Tableau / Power BI users:** generate Tableau-ready CSVs:
+```bash
+python -m src.export_tableau  # writes tableau/candidates.csv + aggregated CSVs
+```
+Then follow [docs/TABLEAU.md](docs/TABLEAU.md) for the recipe to build four dashboard views.
+
+## Run the core analytics scripts
+
+```bash
 python -m src.analyze       # runs all analytics, prints tables
 python -m src.visualize     # regenerates the visualizations
 jupyter lab notebooks/01_funnel_analytics.ipynb

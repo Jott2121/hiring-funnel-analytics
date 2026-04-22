@@ -1,0 +1,13 @@
+from_stage,to_stage,group,n,pass_rate_pct
+applied,screened,non-URM,36098,19.870906975455704
+applied,screened,URM,14040,19.650997150997153
+screened,phone_screen,non-URM,7173,48.06914819461871
+screened,phone_screen,URM,2759,43.53026458861907
+phone_screen,onsite,non-URM,3448,44.80858468677494
+phone_screen,onsite,URM,1201,46.04496253122398
+onsite,offer,non-URM,1545,43.43042071197411
+onsite,offer,URM,553,44.66546112115732
+offer,accepted,non-URM,671,88.82265275707898
+offer,accepted,URM,247,88.66396761133603
+accepted,hired,non-URM,596,94.96644295302013
+accepted,hired,URM,219,98.17351598173516

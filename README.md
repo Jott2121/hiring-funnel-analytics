@@ -1,5 +1,7 @@
 # Hiring Funnel Analytics
 
+![CI](https://github.com/Jott2121/hiring-funnel-analytics/actions/workflows/ci.yml/badge.svg)
+
 Recruiting funnel performance, conversion analysis, and diversity impact monitoring. End-to-end analytics a People Analytics team delivers to the CHRO every quarter: stage-to-stage conversion, source effectiveness, time-to-fill, and statistically rigorous demographic pass-rate monitoring.
 
 **[Live dashboard →](https://hiring-funnel-analytics-jotterson.streamlit.app/)** (no install required)

@@ -4,6 +4,10 @@ End-to-end recruiting funnel analytics: **conversion rates, source effectiveness
 
 **Built by a former Fortune 500 talent acquisition leader who spent 15+ years running the operations this project analyzes.**
 
+### 🚀 [Live demo: hiring-funnel-analytics-jotterson.streamlit.app](https://hiring-funnel-analytics-jotterson.streamlit.app/)
+
+Interactive funnel, source effectiveness, and demographic bias detection — adjust the injected bias slider to see how the audit holds up.
+
 ![Hiring funnel](docs/funnel_overview.png)
 
 ---

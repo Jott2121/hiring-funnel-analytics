@@ -27,19 +27,38 @@ This project demonstrates the four analyses that drive real TA strategy decision
 
 ## The data
 
-Simulated 12-month hiring funnel: **~50,000 candidate applications across 8 roles, 6 sources, 6 locations**. Each candidate has a stage reached, days in that stage, source, role, location, and demographic attributes.
+Simulated 12-month hiring funnel: **~50,000 candidate applications across 8 roles, 6 sources, 6 locations**.
 
-Why simulated? Real hiring funnel data is always proprietary. But the simulator is calibrated against published benchmarks:
+### Per-candidate schema
 
-- **Overall applied → hired conversion**: ~1.5% (aligns with Talent Board / Jobvite industry data)
+| Field | Type | Notes |
+|---|---|---|
+| `candidate_id` | string | Unique identifier |
+| `role` | categorical | 8 roles: Sales Rep, Software Engineer, ML Engineer, Product Manager, Data Analyst, Security Engineer, Recruiter, HR Generalist |
+| `location` | categorical | 6 locations: NY, SF, Austin, Remote, Seattle, Denver |
+| `source` | categorical | 6 sources: Referral, LinkedIn, Job Board, Company Site, Agency, Event/Conference |
+| `gender` | categorical | F / M / NB (non-binary) |
+| `is_urm` | boolean | URM flag (Black, Hispanic, Other/Multi) |
+| `applied_date` | date | Application date across 12-month window |
+| `stage_reached` | ordered categorical | Furthest stage: applied → screened → phone_screen → onsite → offer → accepted → hired |
+| `days_in_stage` | integer | Days spent at terminal stage |
+
+### Calibration
+
+Real hiring funnel data is always proprietary. The simulator is calibrated against published industry benchmarks:
+
+- **Overall applied → hired conversion**: ~1.5% (aligns with Talent Board / Jobvite corporate-role data)
 - **Source mix**: ~15% referrals, ~35% LinkedIn, ~25% job boards (SHRM 2023)
-- **Phone screen → onsite**: ~40-45% pass rate
-- **Offer → accept**: ~80-90% (role dependent)
+- **Phone screen → onsite**: ~40–45% pass rate
+- **Offer → accept**: ~80–90% (role dependent)
 
-Injected into the data:
-- **Referral boost**: referrals convert 1.6x at each stage (calibrated to published data showing referrals as ~40x more effective end-to-end than job boards)
-- **Role difficulty**: ML and Security roles have ~30% lower screened→phone pass rate (fewer qualified applicants per top-of-funnel)
-- **Demographic signal**: URM candidates pass the phone-screen gate at ~12% lower relative rate, modeling a realistic affinity-bias signal the audit is supposed to surface
+### Injected signals (to be recovered by analysis)
+
+| Signal | Effect | Where it shows up |
+|---|---|---|
+| **Referral boost** | 1.6x pass-rate multiplier at every stage | Source effectiveness page: referrals show ~40x hire rate vs job boards |
+| **Role difficulty** | ML and Security roles: ~30% lower screened→phone pass rate | Specialized roles show lower overall conversion and longer time-to-fill |
+| **URM screen bias** | 12% lower relative URM pass rate at the phone-screen gate only | Bias detection page: 4-5 percentage point absolute gap, p < 0.001 |
 
 ---
 
@@ -76,11 +95,28 @@ Specialized roles (ML, Security) show the most variance in fill time. This is th
 
 ### Bias detection (the most important analysis)
 
-Two-proportion z-test on the phone-screen gate, URM vs non-URM candidates:
+A two-proportion z-test compares URM and non-URM candidate pass rates at a specific funnel gate. This is the same hypothesis test used in clinical trials for comparing outcome rates between treatment arms — applied here to hiring gates instead of medical endpoints.
+
+**The math.** For two groups with pass rates p_URM and p_nonURM and sample sizes n_URM and n_nonURM:
 
 ```
-  n_urm                     2759
-  n_nonurm                  7173
+p_pooled = (passes_URM + passes_nonURM) / (n_URM + n_nonURM)
+
+            √( p_pooled × (1 − p_pooled) × (1/n_URM + 1/n_nonURM) )
+standard_error = ────────────────────────────────────────────────────
+
+z = (p_URM − p_nonURM) / standard_error
+
+p_value = 2 × (1 − Φ(|z|))      where Φ is the standard normal CDF
+```
+
+A p-value below 0.05 indicates the observed pass-rate difference is unlikely to have arisen by chance under the null hypothesis of equal pass rates. This is evidence of a systematic difference — not proof of discrimination, but enough to trigger a targeted review.
+
+**Recovered result on simulated data** (injected 12% relative URM screen bias):
+
+```
+  n_urm                     2,759
+  n_nonurm                  7,173
   pass_rate_urm             0.4353
   pass_rate_nonurm          0.4807
   absolute_gap_pp           4.54
@@ -90,6 +126,10 @@ Two-proportion z-test on the phone-screen gate, URM vs non-URM candidates:
 ```
 
 A 4.5 percentage-point gap at the phone-screen gate, p < 0.001.
+
+### Null-effect sanity check
+
+Set the injected URM bias to zero and re-run. The recovered gap drops to 0.7 percentage points with `p = 0.51` — not statistically distinguishable from zero. The test is not generating false positives, which is the check that matters for any bias-detection methodology.
 
 ![Bias by stage](docs/bias_by_stage.png)
 
@@ -111,13 +151,37 @@ The stage-by-stage breakdown shows the gap concentrates at phone screen — exac
 
 ## Interactive dashboard
 
-A multi-page Streamlit app ships with the repo:
+A multi-page Streamlit app ships with the repo. [Try the live version](https://hiring-funnel-analytics-jotterson.streamlit.app/) or run it locally.
 
-| Page | Purpose |
-|---|---|
-| **Home** | Funnel overview, KPI strip, conversion matrix, filters by role + location |
-| **📣 Source Effectiveness** | Volume vs hire rate scatter + budget reallocation recommendation |
-| **⚖️ Bias Detection** | Statistical pass-rate gap with p-values; stage-by-stage breakdown; per-role bias map |
+### Home page
+
+- **Sidebar**: funnel parameters (months to simulate, injected URM bias percent, random seed) and drill-down filters (role, location multi-select)
+- **KPI strip**: total applications, total hires, applied→hired rate, offer→accept rate, top role by volume
+- **Candidate volume bar chart** at each stage of the funnel
+- **Stage-to-stage conversion rates table** with green gradient on pass rate
+- CSV export of filtered candidate data
+
+### Source Effectiveness
+
+Where recruiting investment actually produces hires.
+
+- **KPI strip**: best source and its hire rate, worst source and its hire rate, best-to-worst multiplier
+- **Grouped bar chart**: conversion at three gates (phone screen, offer, hire) by source
+- **Source ranking table** with green gradient on hire rate
+- **Volume-vs-effectiveness scatter** (Plotly): each source plotted by application volume versus hire rate, with bubble size proportional to volume. The ideal sits top-right (high volume, high hire rate); budget drains sit bottom-right (high volume, low hire rate)
+- **Dynamic budget reallocation recommendation** that names the specific high-yield and low-yield sources based on the current filtered data
+- CSV export
+
+### Bias Detection
+
+The most important page for a People Analytics audience.
+
+- **KPI strip**: URM pass rate with sample size, non-URM pass rate with sample size, absolute percentage-point gap, p-value (color-coded significant vs not)
+- **Alert banner**: green success if no significant gap detected, red error if gap is statistically significant — includes the relative gap percentage and suggested next-step language
+- **Stage-by-stage pass rate bar chart** split by URM status — shows where in the funnel the divergence occurs (intervention at phone screen is a different operational response than intervention at onsite)
+- **Stage detail table** with red-green heatmap on the gap column
+- **Phone-screen gap by role**: aggregate bias numbers hide variance across hiring managers and screeners. This view identifies which specific roles to focus intervention on rather than applying generic training across the board
+- **Disclaimer block** explaining what the test does and does not mean (evidence of something, not proof of discrimination; could reflect resume quality, recruiter assignment, rubric design, or structured vs unstructured screens)
 
 ```bash
 pip install -r requirements.txt

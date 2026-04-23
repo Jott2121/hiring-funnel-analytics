@@ -1,12 +1,8 @@
 # Hiring Funnel Analytics
 
-End-to-end recruiting funnel analytics: **conversion rates, source effectiveness, time-to-fill, and demographic bias detection** — the analyses a People Analytics team actually delivers to the CHRO every quarter.
+Recruiting funnel performance, conversion analysis, and diversity impact monitoring. End-to-end analytics a People Analytics team delivers to the CHRO every quarter: stage-to-stage conversion, source effectiveness, time-to-fill, and statistically rigorous demographic pass-rate monitoring.
 
-**Built by a former Fortune 500 talent acquisition leader who spent 15+ years running the operations this project analyzes.**
-
-### 🚀 [Live demo: hiring-funnel-analytics-jotterson.streamlit.app](https://hiring-funnel-analytics-jotterson.streamlit.app/)
-
-Interactive funnel, source effectiveness, and demographic bias detection — adjust the injected bias slider to see how the audit holds up.
+**[Live dashboard →](https://hiring-funnel-analytics-jotterson.streamlit.app/)** (no install required)
 
 ![Hiring funnel](docs/funnel_overview.png)
 
@@ -218,6 +214,64 @@ jupyter lab notebooks/01_funnel_analytics.ipynb
 
 ---
 
+## Enterprise deployment
+
+This project is structured as a decision-support tool, not a production system. The notes below document what would change in an enterprise rollout.
+
+### Source system mapping
+
+| Feature category | Production source |
+|---|---|
+| Candidate records + stage progression | ATS (Greenhouse / Lever / iCIMS / Workday Recruiting) `Application` + `Job_Application_Stage` |
+| Source attribution | ATS source + UTM parameters from career-site analytics |
+| Role, business unit, location | ATS Job + HRIS Job_Requisition |
+| Recruiter assignment | ATS user records |
+| Demographic attributes (self-ID) | ATS self-ID module, subject to jurisdiction and consent |
+| Time-to-fill, time-in-stage | Derived from ATS stage-transition timestamps |
+
+### Data quality checks
+
+- **Required fields non-null**: role, source, stage, applied date
+- **Duplicate candidate detection** across requisitions (same person re-applying)
+- **Source canonicalization** — "LinkedIn", "Linkedin", "LI-sourcer" collapsed to a single channel; free-text source values quarantined pending mapping
+- **Stage ordering integrity**: stage transitions must move forward (catching ATS configurations that allow out-of-order moves)
+- **Withdrawn vs rejected disambiguation**: candidates who withdraw their application are not the same as candidates rejected by the employer; mixing them distorts conversion math
+- **Refresh cadence**: daily for operational dashboards; near-real-time unnecessary for strategic funnel work
+
+### Governance and security
+
+- **Role-based access**: recruiters see their own requisitions; TA leaders see their portfolio; People Analytics sees enterprise-wide. Candidate PII is visible only to recruiters actively working the requisition and their manager.
+- **Demographic data is sensitive**: bias detection outputs must never include individual candidate names. Aggregate stage pass-rates by URM status only; never join back to candidate records in shared dashboards.
+- **Audit log**: every bias-detection query is logged with the user, filters applied, and timestamp.
+- **Auditability**: exports include the source-data snapshot timestamp so findings are reproducible.
+
+### Model monitoring
+
+- **Baseline refresh**: recompute the stage-pass-rate baselines monthly; alert if any stage rate drifts > 10 % from trailing-90-day average.
+- **Bias-test re-run**: run the two-proportion z-test quarterly; flag any stage where the p-value crosses 0.05 in either direction.
+- **Source-mix drift**: track the source mix of top-of-funnel applications; major shifts can invalidate the previous quarter's conclusions and warrant a baseline reset.
+- **Reviewer variance**: when available, stratify by recruiter to isolate whether a bias signal is driven by specific screeners rather than by the rubric.
+
+### Legal review points
+
+- **Bias findings carry significant legal sensitivity.** A statistically significant gap is *evidence of something* — not proof of discrimination — but how that finding is documented and shared has litigation implications.
+- **Intervention design**: every intervention in response to a bias finding (rubric changes, recruiter recalibration, blind-screen pilot) requires Legal review. Some interventions (quotas, preferential routing) are not permitted in most U.S. jurisdictions.
+- **EEOC / OFCCP reporting**: for federal contractors, any systemic bias finding may trigger reporting obligations. Employment law counsel must be in the loop before detected findings are documented in writing.
+- **Candidate-facing communications**: candidates have the right (in many jurisdictions, the requirement) to understand how automated screening affects them.
+
+### User roles
+
+| Role | Permitted use |
+|---|---|
+| Recruiters | Operate within their own requisitions; see funnel health for their portfolio |
+| TA leaders | See source effectiveness, time-to-fill, and aggregate funnel across their teams |
+| People Analytics | Maintain the model, investigate drift and bias, support intervention design |
+| Employment Law / Compliance | Review bias findings before they are shared outside the core analytics team |
+| HR Business Partners | Consume aggregate findings in their business unit |
+| Executives | Consume enterprise summaries; approve cross-portfolio intervention decisions |
+
+---
+
 ## What a serious reviewer will ask
 
 1. **"These bias tests control for nothing."** Correct — the headline tests are marginal. A complete audit regresses pass rate on demographics *after* controlling for resume strength, role, source, and time period. Included in the notebook as a follow-on analysis.
@@ -232,9 +286,10 @@ jupyter lab notebooks/01_funnel_analytics.ipynb
 
 ## About
 
-Built by **Jeff Otterson** — talent acquisition leader with Fortune 500 experience at Amazon and Oracle. Building a portfolio of people analytics projects applying modern data science and ML to the operational problems I've seen firsthand.
+Part of a People Analytics portfolio covering workforce planning, recruiting, compensation equity, and retention. Companion repositories:
 
-- **Companion projects**: [hr-attrition-predictor](https://github.com/Jott2121/hr-attrition-predictor) · [compensation-equity-analysis](https://github.com/Jott2121/compensation-equity-analysis)
-- **MeritForge AI**: [meritforgeai.com](https://www.meritforgeai.com)
+- [workforce-planning-demand-forecast](https://github.com/Jott2121/workforce-planning-demand-forecast) — strategic workforce planning and recruiter capacity
+- [compensation-equity-analysis](https://github.com/Jott2121/compensation-equity-analysis) — regression-based pay equity audit
+- [hr-attrition-predictor](https://github.com/Jott2121/hr-attrition-predictor) — responsible retention risk modeling
 
-MIT licensed.
+Maintainer: [Jeff Otterson](https://github.com/Jott2121). Libraries: `pandas`, `scipy`, `streamlit`, `plotly`. MIT licensed.
